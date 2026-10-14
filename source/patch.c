@@ -111,10 +111,36 @@ void so_patch(void) {
     // Patch PlayerData::isUnlockAllPurchased() at 0x2e3704:
     // Make it unconditionally return 1 (true) so the full game, all worlds, and levels
     // are permanently unlocked, eliminating in-app purchase prompts for nonexistent servers.
-    // 'mov r0, #1' = 0xe3a00001, 'bx lr' = 0xe12fff1e
+    // Verified ARM (objdump: push {r3,lr} ... pop {r3,pc}), 'mov r0, #1' = 0xe3a00001,
+    // 'bx lr' = 0xe12fff1e. Checks the save's transaction list for the unlock-all
+    // product (getIndexOfExistingTransactionForProduct, -1 = not found); the save on
+    // Vita always has Nb transactions = 0, so without this it never unlocks.
     uint32_t patch_unlock[2] = { 0xe3a00001, 0xe12fff1e };
     kuKernelCpuUnrestrictedMemcpy((void *)(so_mod.text_base + 0x2e3704), patch_unlock, sizeof(patch_unlock));
     l_info("Patched PlayerData::isUnlockAllPurchased at 0x2e3704: unlocked full game.");
+
+    // Seed the direct-read flag PlayerData::is_unlock_all_purchased (0x5ee1ae, B)
+    // to 1. Covers code paths that read the bool instead of the getter above.
+    // NOTE: the save loader (loadSecondaryInfo) may overwrite this from disk later;
+    // the function patch above still governs the getter, so both layers are covered.
+    {
+        uint8_t one = 1;
+        kuKernelCpuUnrestrictedMemcpy((void *)(so_mod.text_base + 0x5ee1ae), &one, sizeof(one));
+        l_info("Seeded PlayerData::is_unlock_all_purchased at 0x5ee1ae = 1.");
+    }
+
+    // Neutralize Pasta::PlayBillingStore::buyProduct(int,int) at 0x2b0228:
+    // first instruction -> 'bx lr' (0xe12fff1e, ARM verified: push {r4-r7,lr} ...).
+    // Without a Play Store on Vita the original flow logs buyProduct(0/1,1),
+    // resolves product "no", calls Java storeBuyProduct (no-op here), leaves the
+    // transaction PENDING forever and spams the dead iTunes URL
+    // (itms-appss://buy.itunes.apple.com ... salableAdamId=537931449, see run 011).
+    // Early return: tapping a store button does nothing instead of hanging.
+    {
+        uint32_t bx_lr = 0xe12fff1e;
+        kuKernelCpuUnrestrictedMemcpy((void *)(so_mod.text_base + 0x2b0228), &bx_lr, sizeof(bx_lr));
+        l_info("Patched PlayBillingStore::buyProduct at 0x2b0228: store disabled (no-op).");
+    }
 }
 
 
