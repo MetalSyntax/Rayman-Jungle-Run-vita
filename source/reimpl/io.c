@@ -92,49 +92,6 @@ static int resolve_file_path(const char *in, char *out, size_t out_len) {
     return 0;
 }
 
-#if defined(USE_SCELIBC_IO) && defined(DEBUG_SOLOADER)
-// Temporary trace for FMOD_ERR_FORMAT on every .ogg (runs 006/007): logs the
-// stdio calls made on the first few .ogg FILE*s. Remove once audio works.
-static FILE *ogg_trace_fp = NULL;
-static int ogg_trace_files = 0, ogg_trace_ops = 0;
-
-static void ogg_trace_open(const char *filename, FILE *f) {
-    size_t n = strlen(filename);
-    if (f && ogg_trace_files < 3 && n > 4 && strcmp(filename + n - 4, ".ogg") == 0) {
-        ogg_trace_fp = f;
-        ogg_trace_files++;
-        ogg_trace_ops = 0;
-    }
-}
-
-size_t fread_trace(void *ptr, size_t size, size_t count, FILE *f) {
-    size_t ret = sceLibcBridge_fread(ptr, size, count, f);
-    if (f == ogg_trace_fp && ogg_trace_ops++ < 40) {
-        const unsigned char *b = ptr;
-        l_info("ogg-trace fread(%p, %u, %u) = %u [%02x %02x %02x %02x]", f,
-               (unsigned)size, (unsigned)count, (unsigned)ret,
-               ret ? b[0] : 0, ret ? b[1] : 0, ret ? b[2] : 0, ret ? b[3] : 0);
-    }
-    return ret;
-}
-
-int fseek_trace(FILE *f, long off, int whence) {
-    int ret = sceLibcBridge_fseek(f, off, whence);
-    if (f == ogg_trace_fp && ogg_trace_ops++ < 40)
-        l_info("ogg-trace fseek(%p, %ld, %d) = %d", f, off, whence, ret);
-    return ret;
-}
-
-long ftell_trace(FILE *f) {
-    long ret = sceLibcBridge_ftell(f);
-    if (f == ogg_trace_fp && ogg_trace_ops++ < 40)
-        l_info("ogg-trace ftell(%p) = %ld", f, ret);
-    return ret;
-}
-#else
-#define ogg_trace_open(name, f) ((void)0)
-#endif
-
 FILE * fopen_soloader(const char * filename, const char * mode) {
     if (strcmp(filename, "/proc/cpuinfo") == 0) {
         return fopen_soloader("app0:/cpuinfo", mode);
@@ -150,7 +107,6 @@ FILE * fopen_soloader(const char * filename, const char * mode) {
         FILE *ret = fopen(resolved, mode);
 #endif
         l_debug("fopen(%s -> %s, %s): %p", filename, resolved, mode, ret);
-        ogg_trace_open(resolved, ret);
         return ret;
     }
 
@@ -280,12 +236,6 @@ int stat_soloader(const char * path, stat64_bionic * buf) {
 }
 
 int fclose_soloader(FILE * f) {
-#if defined(USE_SCELIBC_IO) && defined(DEBUG_SOLOADER)
-    if (f == ogg_trace_fp) {
-        l_info("ogg-trace fclose(%p) after %i ops", f, ogg_trace_ops);
-        ogg_trace_fp = NULL;
-    }
-#endif
 #ifdef USE_SCELIBC_IO
     int ret = sceLibcBridge_fclose(f);
 #else

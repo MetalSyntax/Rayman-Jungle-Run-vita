@@ -84,11 +84,10 @@ if (DUMP_COMPILED_SHADERS)
   endif()
 endif()
 
-# Unique debug definition for loader's logging to not interfere with anything
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+# Loader logging definition
+option(DEBUG_SOLOADER "Enable soloader debug logging" ON)
+if (DEBUG_SOLOADER)
   add_definitions(-DDEBUG_SOLOADER)
-  # Uncomment this for verbose FalsoJNI logging:
-  #add_definitions(-DFALSOJNI_DEBUGLEVEL=0)
 endif()
 
 # makes sincos, sincosf, etc. visible

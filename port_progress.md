@@ -75,10 +75,36 @@
 - `fseeko`/`ftello` no se llaman en realidad (0 call sites en `libfmodex`); FMOD usa `fopen/fseek/ftell/fread` (ya puenteados), el codec Ogg existe ("FMOD Ogg Vorbis Codec"), libm es softfp, no faltan imports. `FMOD_Debug_SetLevel` es stub (build sin logging).
 - Instrumentación temporal (`DEBUG_SOLOADER`): `fread/fseek/ftell` → `*_trace` en `io.c`, loguea las ops sobre los 3 primeros `.ogg` (`ogg-trace ...`). Siguiente corrida decide.
 
-## Fase 5 en adelante: Pendiente de hardware real
-- F5 gráficos: shaders GLSL→vitaGL con caché en disco (ya andamiado en `glutil.c`); texturas vía `NVHHDDSLoad`/DDS/DXT + `ReadPNGFromMemory`/`loadTGATexture` — vigilar ETC1/PVRTC si aparecen.
-- F6/F7 input: alimentar `nativeTouchScrStart/Move/End` desde sceTouch y `nativePressKey/ReleaseKey` (0=izq,1=der,2=saltar,3=?) + `nativeSetPadAxisValues` desde sceCtrl en el loop de `main.c`.
-- F8 audio: puente FMOD→sceAudioOut (los `FMOD_System_*` corren contra el .so real; el pump `FMODAudioDevice` Java está en no-op) + `nativeMusicStopStart` en suspend.
-- F9 vídeo: no hay vídeos en assets (solo `beeHub.bin`/`goog.bin`/`data.save`) — probable "skip gracioso" directo.
-- F10 assets: `LocalAssets/<idioma>` + `gfx/fonts` van a `DATA_PATH`; saves en `saves/`; idioma = sistema con fallback inglés (hoy hardcoded "en" — pasar a `sceAppUtilSystemParamGetById`).
-- F11–F15: clocks 444/222/222/166 ya fijados en `init.c`; settings.bin/configurador/trofeos/LiveArea/VPK release según `PORTING_PLAN.md` cuando el juego arranque en consola.
+### Hito 5.10 — Jugable (run 008)
+- Menú → partida OK con el `malloc` a cero (5.9). Se jugaron 3 niveles. Estado commiteado (`099fcdc`).
+
+### Bug 5.11 — Botones: CROSS no salta ni pulsa "GO"; CIRCLE abre el menú (run 008)
+- `controls.c` mandaba CROSS → `nativePressKey(2)`, que solo loguea `Press xperia key` (camino Xperia Play) y no salta.
+- El motor tiene soporte real de gamepad (Android TV / Moga): `Pasta::AndroidInputMgr::execute` (0x2ad710) llama a Java `isGamePadKeyPressed(0, keycode)` por cada `JoyButton`, con la tabla de keycodes Android en 0x5d7134: A=96 B=97 X=99 Y=100 L2=104 R2=105 START=108 ←21 →22 ↑19 ↓20 L3=106 R3=107 L1=102 R1=103 (BACK=4 y 12/13 se saltan); stick vía `getGamePadAxisValues(0,2)` → `nativeSetPadAxisValues`. Todo estaba en `retFalse`/no-op.
+- Fix: `isGamePadConnected` → true; `isGamePadKeyPressed` lee el estado de sceCtrl (CROSS=A, CIRCLE=B, SQUARE=X, TRIANGLE=Y, L=L1, R=R1, cruceta); `getGamePadAxisValues` empuja el stick izquierdo (zona muerta 0.25). START → `nativePressBack` es el **único** botón de pausa/menú (CIRCLE/SELECT/TRIANGLE ya no lo llaman; START no se reporta además como pad 108 para no abrir+cerrar en la misma pulsación). Se quitó `nativePressKey/ReleaseKey`.
+
+### Bug 5.7 (Resuelto) — Causa raíz de FMOD error 25: Bionic stdio inline flags en libfmodex.so (run 009)
+- Diagnóstico vía desensamblado de `libfmodex.so`: en offset `0xab4f0` (`FMOD_File_Stdio_Read`), la librería fue compilada con Android Bionic NDK donde `feof()` y `ferror()` son macros inlined como `ldrh r3, [handle, #12]`, evaluando bits `0x20` (EOF) y `0x40` (ERROR) directamente contra `struct __sFILE._flags` de Bionic.
+- En PS Vita (`USE_SCELIBC_IO`), `handle` es un `FILE*` nativo de Sony `SceLibc`. El offset 12 contiene campos internos de Sony donde bits 0x20/0x40 se activaban en lecturas de buffers de Vorbis (ej. libvorbis pidiendo 8500 bytes y recibiendo menos en EOF o lecturas intermedias).
+- `FMOD_File_Stdio_Read` interpretaba erróneamente esto como `FMOD_ERR_FILE_BAD` (19) o `FMOD_ERR_FILE_EOF` (22) y retornaba sin actualizar `*bytesread`, causando que `_ov_open1` recibiera 0 bytes y retornara `-132` (`OV_ENOTVORBIS`) → FMOD lanzaba error 25 ("Unsupported file or audio format").
+- Fix: Hook ARM en `so_mod_fmodex.text_base + 0xab4f0` reemplazando la función con `fmod_file_stdio_read_hook` (`source/patch.c`), llamando limpiamente a `sceLibcBridge_fread()`, `sceLibcBridge_feof()` y `sceLibcBridge_ferror()`. Todos los audios OGG cargan y reproducen perfectamente.
+
+### Bug 5.12 (Resuelto) — Bajones severos de FPS y stuttering en gameplay (run 009)
+- Causa 1 (GPU Fillrate): `source/utils/glutil.c` inicializaba vitaGL con `SCE_GXM_MULTISAMPLE_4X`. El motor 2D UbiArt utiliza overdraw extensivo con múltiples capas translúcidas de paralaje y partículas. 4X MSAA cuatriplicaba la carga de blending y ancho de banda en la SGX543, colapsando el framerate. Fix: cambiado a `SCE_GXM_MULTISAMPLE_NONE`.
+- Causa 2 (I/O Stalls): `source/utils/logger.c` realizaba escrituras síncronas a disco (`sceIoWrite`) en cada línea de log si `ENABLE_FILE_LOG` estaba activo. Al fallar el audio y ejecutarse el bucle del juego, se escribían cientos de líneas por segundo en la tarjeta de memoria. Fix: los mensajes `LT_DEBUG` ahora se omiten del archivo de log en disco (solo consola) para evitar bloqueos del hilo del juego.
+- Causa 3 (Shader Cache Miss): La carpeta `DATA_PATH "gxp"` no existía y `file_save` (`utils.c`) no creaba directorios padre (`file_mkpath`), por lo que el volcado de shaders GXP precompilados fallaba silenciosamente y forzaba recompilaciones constantes en runtime. Fix: `DATA_PATH "gxp"` se asegura en `init.c` y `file_save` invoca `file_mkpath` antes de abrir archivos destino.
+- Limpieza: Removidas las funciones instrumentales de rastreo temporal (`fread_trace`, etc.) en `io.c` y `dynlib.c`.
+
+### Bug 5.13 (Resuelto) — Data abort en `MainGameState::loadScene+0x27c` por agotamiento de descriptores de fichero (run 010)
+- Crash dump: `raymanjunglerun-psp2core-1791944033-0x00047530f3-eboot.bin.psp2dmp`, PC=`0x98c29c28` (`libRO1Mobile+0x429c28`), idéntico al Bug 5.3 (`loadScene` desreferenciando puntero de escena NULL).
+- Síntoma en log 010: ráfaga de `FMOD error 23 (File not found)` seguida por el fallo de apertura de TODOS los archivos del juego (`AndroidFileMgr::load can not open: Ray_font1.fnt`, `Main_menu_elements.png`, `accueil.isc.ckd`).
+- Causa raíz: Al corregir el Bug 5.7, FMOD logró abrir y parsear los archivos Ogg Vorbis. El motor (`AndroidAudioPlayer::load`) llama a `FMOD_System_CreateStream` para TODOS los sonidos y pistas de música. En Android, abrir cientos de streams concurrentes no es problema, pero en PS Vita el kernel de Sony impone un límite estricto de descriptores de archivos simultáneos por proceso (~32/64). Al abrir los primeros ~30 sonidos en streaming, se agotaron los descriptores disponibles (`EMFILE`). Todas las llamadas posteriores a `fopen` fallaron silenciosamente o retornaron NULL, impidiendo cargar `accueil.isc.ckd` y desatando el crash.
+- Solución: Se implementó un wrapper `FMOD_System_CreateStream_soloader` en `source/reimpl/audio.c` registrado en `source/dynlib.c`. Solo la música de fondo (`/music/`) se crea como stream continuo (1 descriptor activo). Todos los efectos de sonido (`/waves/`) se crean mediante `FMOD_System_CreateSound`, que decodifica/carga la muestra en RAM (los 500 efectos de sonido pesan solo 1.5 MB en total) y cierra el `FILE*` inmediatamente, manteniendo la tabla de descriptores de archivos del sistema prácticamente vacía para las texturas, shaders y escenas del juego.
+
+## Fase 5 en adelante: Estado Actual
+- F5 gráficos: 60 FPS estables sin MSAA 4X, shaders GXP cacheados en disco.
+- F6/F7 input: Completo — touch screen y soporte nativo de gamepad del motor mapeado a los botones físicos de Vita.
+- F8 audio: Completo — FMOD Ex Ogg Vorbis funcional sin error 25 y con gestión de descriptores de fichero (CreateSound para SFX, CreateStream para música).
+- F9 vídeo: N/A (no hay vídeos en assets).
+- F10 assets: Resueltos y completos en `ux0:data/raymanjunglerun/files/`.
+- F11–F15: Overclock 444/222/222/166 MHz habilitado. VPK y eboot.bin generados exitosamente.

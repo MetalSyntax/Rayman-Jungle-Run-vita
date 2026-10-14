@@ -21,6 +21,7 @@
 #include <psp2/apputil.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/power.h>
+#include <psp2/io/stat.h>
 
 #include <falso_jni/FalsoJNI.h>
 #include <so_util/so_util.h>
@@ -75,6 +76,9 @@ void soloader_init_all() {
     scePowerSetBusClockFrequency(222);
     scePowerSetGpuClockFrequency(222);
     scePowerSetGpuXbarClockFrequency(166);
+
+    sceIoMkdir(DATA_PATH, 0777);
+    sceIoMkdir(DATA_PATH "gxp", 0777);
 
 #ifdef USE_SCELIBC_IO
     if (fios_init(DATA_PATH) == 0)

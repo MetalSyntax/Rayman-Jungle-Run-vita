@@ -22,6 +22,15 @@ void audio_stop(void);
 /** Output silence without stopping FMOD (used while the app is suspended). */
 void audio_set_muted(int muted);
 
+/**
+ * Replacement for FMOD_System_CreateStream:
+ * Long music files are streamed, but short sound effects (waves) are loaded
+ * into RAM as samples using FMOD_System_CreateSound so their FILE* handles
+ * are closed immediately, preventing PS Vita open file descriptor exhaustion (EMFILE).
+ */
+int FMOD_System_CreateStream_soloader(void *system, const char *name_or_data,
+                                     unsigned int mode, void *exinfo, void **sound);
+
 #ifdef __cplusplus
 };
 #endif

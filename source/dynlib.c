@@ -53,6 +53,7 @@
 #include "reimpl/egl.h"
 #include "reimpl/time64.h"
 #include "reimpl/asset_manager.h"
+#include "reimpl/audio.h"
 
 const unsigned int __page_size = PAGE_SIZE;
 
@@ -435,23 +436,11 @@ so_default_dynlib default_dynlib[] = {
             { "fileno", (uintptr_t)&sceLibcBridge_fileno },
             { "fputc", (uintptr_t)&sceLibcBridge_fputc },
             { "fputs", (uintptr_t)&sceLibcBridge_fputs },
-          #ifdef DEBUG_SOLOADER
-            { "fread", (uintptr_t)&fread_trace },
-          #else
             { "fread", (uintptr_t)&sceLibcBridge_fread },
-          #endif
             { "freopen", (uintptr_t)&sceLibcBridge_freopen },
-          #ifdef DEBUG_SOLOADER
-            { "fseek", (uintptr_t)&fseek_trace },
-          #else
             { "fseek", (uintptr_t)&sceLibcBridge_fseek },
-          #endif
             { "fsetpos", (uintptr_t)&sceLibcBridge_fsetpos },
-          #ifdef DEBUG_SOLOADER
-            { "ftell", (uintptr_t)&ftell_trace },
-          #else
             { "ftell", (uintptr_t)&sceLibcBridge_ftell },
-          #endif
             { "fwide", (uintptr_t)&sceLibcBridge_fwide },
             { "fwrite", (uintptr_t)&sceLibcBridge_fwrite },
             { "getc", (uintptr_t)&sceLibcBridge_getc },
@@ -1072,6 +1061,9 @@ so_default_dynlib default_dynlib[] = {
         { "inflateInit_", (uintptr_t)&inflateInit_ },
         { "inflateReset", (uintptr_t)&inflateReset },
         { "uncompress", (uintptr_t)&uncompress },
+
+        // FMOD overrides
+        { "FMOD_System_CreateStream", (uintptr_t)&FMOD_System_CreateStream_soloader },
 };
 
 const size_t default_dynlib_size = sizeof(default_dynlib);

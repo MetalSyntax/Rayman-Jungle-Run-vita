@@ -127,12 +127,13 @@ Phases 7, 9 and 12-14 include the scene extras (see ports by TheFlow, Rinnegatam
 - [x] Rear panel ignored to prevent accidental inputs.
 
 ### Phase 7: Physical controls
-- [x] Physical button mapping (`source/controls.c`): Cross/Up -> Jump/Action (Key 2); Square/R/L -> Attack/Helicopter (Key 3); D-pad Left/Right -> Key 0/1; Start/Circle/Select -> `nativePressBack` (Pause); Triangle -> `nativePressMenu`.
-- [x] Analog / D-pad mapped to digital keys natively supported by the engine.
+- [x] Physical buttons go through the engine's own gamepad support (`Pasta::AndroidInputMgr::execute` polls `isGamePadKeyPressed(0, androidKeycode)`, table at 0x5d7134): Cross=A(96) jump/confirm, Circle=B(97), Square=X(99), Triangle=Y(100), L=L1(102), R=R1(103), D-pad=19..22; left stick -> `getGamePadAxisValues` -> `nativeSetPadAxisValues`. Start -> `nativePressBack` is the only pause/menu button. (The old `nativePressKey` Xperia path did not jump: port_progress Bug 5.11.)
+- [ ] Hardware test of the gamepad mapping (run 009).
 - [x] Controls table documented in README / plan.
 
 ### Phase 8: Audio
 - [x] Audio backend: FMOD Ex AudioTrack pump implemented in `source/reimpl/audio.c` via dedicated thread calling `fmodProcess()` and pumping PCM into `sceAudioOutOutput()`. FalsoJNI `GetDirectBufferAddress` overridden in `source/java.c` to pass raw PCM buffer.
+- [ ] FMOD error 25 on every `.ogg`: file I/O verified correct (run 008); failing inside FMOD's embedded vorbisfile `ov_open_callbacks` (0xc016c), instrumented with `ov-trace` (port_progress Bug 5.7).
 - [ ] Hardware test of sample rate and channel mixing without crackling.
 
 ### Phase 9: Videos / FMV

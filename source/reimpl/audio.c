@@ -192,3 +192,44 @@ void audio_stop(void) {
 void audio_set_muted(int muted) {
     audio_muted = muted;
 }
+
+typedef int (*FMOD_System_CreateSound_t)(void *system, const char *name_or_data,
+                                        unsigned int mode, void *exinfo, void **sound);
+typedef int (*FMOD_System_CreateStream_t)(void *system, const char *name_or_data,
+                                         unsigned int mode, void *exinfo, void **sound);
+
+int FMOD_System_CreateStream_soloader(void *system, const char *name_or_data,
+                                     unsigned int mode, void *exinfo, void **sound) {
+    static FMOD_System_CreateSound_t fmod_create_sound = NULL;
+    static FMOD_System_CreateStream_t fmod_create_stream = NULL;
+
+    if (!fmod_create_sound)
+        fmod_create_sound = (FMOD_System_CreateSound_t) so_symbol(&so_mod_fmodex, "FMOD_System_CreateSound");
+    if (!fmod_create_stream)
+        fmod_create_stream = (FMOD_System_CreateStream_t) so_symbol(&so_mod_fmodex, "FMOD_System_CreateStream");
+
+    // Only stream long background music tracks (e.g. in sfx/music/).
+    // Load all short sound effects (sfx/waves/) into memory as samples so their
+    // FILE* handles are closed immediately. PS Vita has a hard limit on open file
+    // descriptors (EMFILE); keeping ~500 sound streams open exhausts all available
+    // file descriptors and causes subsequent fopen() calls (textures, scenes) to fail.
+    int is_music = (name_or_data && (strstr(name_or_data, "/music/") ||
+                                     strstr(name_or_data, "\\music\\") ||
+                                     strstr(name_or_data, "Mus_") ||
+                                     strstr(name_or_data, "menu.ogg")));
+
+    if (is_music && fmod_create_stream) {
+        return fmod_create_stream(system, name_or_data, mode, exinfo, sound);
+    }
+
+    if (fmod_create_sound) {
+        int res = fmod_create_sound(system, name_or_data, mode, exinfo, sound);
+        if (res == 0)
+            return 0;
+    }
+
+    if (fmod_create_stream)
+        return fmod_create_stream(system, name_or_data, mode, exinfo, sound);
+
+    return 30; // FMOD_ERR_INTERNAL
+}

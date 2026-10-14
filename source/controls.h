@@ -15,6 +15,10 @@ extern "C" {
 void controls_init(void);
 void controls_poll(void);
 
+// Backing for GameActivity.isGamePadKeyPressed / getGamePadAxisValues.
+unsigned char controls_pad_key_pressed(int keycode);
+void controls_pad_update_axis(int pad);
+
 #ifdef __cplusplus
 };
 #endif

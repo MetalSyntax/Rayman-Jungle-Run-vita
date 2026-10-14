@@ -162,6 +162,8 @@ bool file_mkpath(const char * path, mode_t mode) {
 }
 
 bool file_save(const char * path, const uint8_t * buffer, size_t size) {
+    file_mkpath(path, 0755);
+
 #ifdef USE_SCELIBC_IO
     FILE * f = sceLibcBridge_fopen(path, "wb");
 #else

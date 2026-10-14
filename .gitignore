@@ -58,3 +58,7 @@ cmake-build-*/
 vendor/vitaGL/*.a
 vendor/vitaGL/**/*.o
 vendor/vitaGL/.vitagl_flags*
+
+# Temp assets & backups
+*.bak
+*.webp

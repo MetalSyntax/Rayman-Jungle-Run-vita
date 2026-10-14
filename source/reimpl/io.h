@@ -86,12 +86,6 @@ int close_soloader(int fd);
 
 int fclose_soloader(FILE *f);
 
-#if defined(USE_SCELIBC_IO) && defined(DEBUG_SOLOADER)
-size_t fread_trace(void *ptr, size_t size, size_t count, FILE *f);
-int fseek_trace(FILE *f, long off, int whence);
-long ftell_trace(FILE *f);
-#endif
-
 int closedir_soloader(DIR *dir);
 
 int fcntl_soloader(int fd, int cmd, ...);

@@ -38,6 +38,7 @@
 #include <psp2/kernel/processmgr.h>
 
 #include "utils/logger.h"
+#include "controls.h"
 
 enum {
     M_MAKE_DIR = 1,
@@ -264,6 +265,25 @@ static jobject java_emptyString(jmethodID id, va_list args) {
     return (jobject)jni->NewStringUTF(&jni, "");
 }
 
+// Gamepad: the Vita buttons are the engine's "connected pad" (controls.c).
+static jboolean java_isGamePadKeyPressed(jmethodID id, va_list args) {
+    (void)id;
+    (void)va_arg(args, jint); // pad index, Vita has one
+    int keycode = va_arg(args, jint);
+    return controls_pad_key_pressed(keycode);
+}
+
+static void java_getGamePadAxisValues(jmethodID id, va_list args) {
+    (void)id;
+    int pad = va_arg(args, jint);
+    controls_pad_update_axis(pad);
+}
+
+static jboolean retTrue(jmethodID id, va_list args) {
+    (void)id; (void)args;
+    return JNI_TRUE;
+}
+
 // FMODAudioDevice.fetchChannelConfigFromCount: silent stub (Phase 8 will
 // bridge FMOD -> sceAudioOut; 0 channels keeps the mixer idle).
 static jint java_fmodFetchConfig(jmethodID id, va_list args) {
@@ -277,8 +297,8 @@ MethodsBoolean methodsBoolean[] = {
     { M_ASSET_EXISTS,          java_assetExists },
     { M_IS_TABLET,             retFalse },
     { M_SHOULD_CLEAR_DATA,     retFalse },
-    { M_IS_GAMEPAD_CONNECTED,  retFalse },
-    { M_IS_GAMEPAD_KEY_PRESSED, retFalse },
+    { M_IS_GAMEPAD_CONNECTED,  retTrue },
+    { M_IS_GAMEPAD_KEY_PRESSED, java_isGamePadKeyPressed },
     { M_IS_MOGA_CONNECTED,     retFalse },
     { M_IS_MOGA_ACTIVE,        retFalse },
     { M_IS_REMOTE,             retFalse },
@@ -318,7 +338,7 @@ MethodsVoid methodsVoid[] = {
     { M_SET_CAN_QUIT,          voidNoop },
     { M_SHOW_TEXT_FIELD,       voidNoop },
     { M_HIDE_TEXT_FIELD,       voidNoop },
-    { M_GET_GAMEPAD_AXIS,      voidNoop }, // Phase 7: feed nativeSetPadAxisValues
+    { M_GET_GAMEPAD_AXIS,      java_getGamePadAxisValues },
     { M_OPEN_URL_BROWSER,      voidNoop },
     { M_DISPLAY_WARNING,       java_displayWarning },
     { M_DISPLAY_WARNING_RES,   voidNoop },

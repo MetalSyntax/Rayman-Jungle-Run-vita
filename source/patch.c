@@ -12,10 +12,59 @@
  */
 
 #include "utils/logger.h"
+#include <stdio.h>
 #include <kubridge.h>
 #include <so_util/so_util.h>
 
+#ifdef USE_SCELIBC_IO
+#include <libc_bridge/libc_bridge.h>
+#endif
+
 extern so_module so_mod;
+extern so_module so_mod_fmodex;
+
+/**
+ * Hook for FMOD's internal stdio read function at 0xab4f0.
+ * In libfmodex.so, this function reads [handle, #12] directly to check for
+ * EOF (bit 0x20) and ERROR (bit 0x40), assuming Bionic libc's struct __sFILE.
+ * On PS Vita with SceLibc, handle is a Sony SceLibc FILE* where offset 12 has
+ * internal SceLibc fields. If bit 0x40 is set, FMOD thinks an error occurred
+ * and returns 19 (FMOD_ERR_FILE_BAD), completely breaking all Vorbis/OGG
+ * reading with FMOD error 25 ("Unsupported format").
+ * By replacing it with standard feof/ferror checks, FMOD reads .ogg streams cleanly.
+ */
+static int fmod_file_stdio_read_hook(FILE *handle, void *buffer, unsigned int sizebytes,
+                                     unsigned int *bytesread, void *userdata) {
+    (void)userdata;
+    if (!handle)
+        return 37; // FMOD_ERR_INVALID_PARAM
+
+#ifdef USE_SCELIBC_IO
+    size_t r = sceLibcBridge_fread(buffer, 1, sizebytes, handle);
+    if (bytesread)
+        *bytesread = (unsigned int)r;
+
+    if (r < sizebytes) {
+        if (sceLibcBridge_feof(handle))
+            return 22; // FMOD_ERR_FILE_EOF
+        if (sceLibcBridge_ferror(handle))
+            return 19; // FMOD_ERR_FILE_BAD
+    }
+#else
+    size_t r = fread(buffer, 1, sizebytes, handle);
+    if (bytesread)
+        *bytesread = (unsigned int)r;
+
+    if (r < sizebytes) {
+        if (feof(handle))
+            return 22; // FMOD_ERR_FILE_EOF
+        if (ferror(handle))
+            return 19; // FMOD_ERR_FILE_BAD
+    }
+#endif
+
+    return 0; // FMOD_OK
+}
 
 // Dummy function returning 0 for any call on the dummy logger instance
 static int dummy_logger_noop(void) {
@@ -53,5 +102,19 @@ void so_patch(void) {
     uintptr_t inst_ptr = (uintptr_t)dummy_logger_instance;
     kuKernelCpuUnrestrictedMemcpy((void *)(so_mod.text_base + 0x5dae78), &inst_ptr, sizeof(uintptr_t));
     l_info("Initialized GameBehaviourLogger::singleton at 0x5dae78 with active no-op vtable.");
+
+    // Hook FMOD's internal stdio read (0xab4f0) to use SceLibc feof/ferror instead
+    // of inlined Bionic struct __sFILE flags offset [handle, #12].
+    hook_arm(so_mod_fmodex.text_base + 0xab4f0, (uintptr_t)&fmod_file_stdio_read_hook);
+    l_info("Hooked FMOD stdio read (0xab4f0) for SceLibc compatibility.");
+
+    // Patch PlayerData::isUnlockAllPurchased() at 0x2e3704:
+    // Make it unconditionally return 1 (true) so the full game, all worlds, and levels
+    // are permanently unlocked, eliminating in-app purchase prompts for nonexistent servers.
+    // 'mov r0, #1' = 0xe3a00001, 'bx lr' = 0xe12fff1e
+    uint32_t patch_unlock[2] = { 0xe3a00001, 0xe12fff1e };
+    kuKernelCpuUnrestrictedMemcpy((void *)(so_mod.text_base + 0x2e3704), patch_unlock, sizeof(patch_unlock));
+    l_info("Patched PlayerData::isUnlockAllPurchased at 0x2e3704: unlocked full game.");
 }
+
 
