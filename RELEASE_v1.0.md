@@ -1,4 +1,24 @@
-# Rayman Jungle Run — PS Vita Port v1.0
+# Rayman Jungle Run — PS Vita Port Releases
+
+---
+
+## Release v1.0.1 (Hotfix)
+
+### What's New in v1.0.1
+- **Automatic Save Directory Creation (Fixes #3):**
+  - Added automatic creation of `ux0:data/raymanjunglerun/saves/` on game launch via `sceIoMkdir`.
+  - Fixes an issue on real PS Vita hardware where saving failed silently because the `saves/` folder was never created by the native engine (in the original Android APK, this was created by Java in `GameActivity.onCreate`).
+  - Players no longer need to manually create the `saves/` directory via VitaShell.
+
+### Release Artifacts (v1.0.1)
+- **VPK:** `raymanjunglerun.vpk`
+  - SHA256: `ac7d8c18cfa3889dc342a5b54b4dbbea7240f67cad76ad484b346a27d7168345`
+- **EBOOT:** `eboot.bin`
+  - SHA256: `0caa83a41ea54228ca5b5e347d520f36488d595521c58ccd705d03d605683ef2`
+
+---
+
+## Release v1.0.0
 
 First official release of **Rayman Jungle Run** for the PlayStation Vita and PlayStation TV!
 
