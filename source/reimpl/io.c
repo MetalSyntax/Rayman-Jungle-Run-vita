@@ -235,6 +235,19 @@ int stat_soloader(const char * path, stat64_bionic * buf) {
     return res;
 }
 
+// AndroidPersistentMgr::readData gates every save load on access(path, F_OK).
+// Raw newlib access() skips the "//" normalization fopen_soloader does, so it
+// failed and the engine silently reset progress even though slot1.dat existed.
+// ponytail: mode is ignored (only F_OK is used; Vita has no per-file perms).
+int access_soloader(const char * path, int mode) {
+    (void)mode;
+    stat64_bionic st;
+    int res = stat_soloader(path, &st) == 0 ? 0 : -1;
+    if (res != 0)
+        l_debug("access(%s): not found", path);
+    return res;
+}
+
 int fclose_soloader(FILE * f) {
 #ifdef USE_SCELIBC_IO
     int ret = sceLibcBridge_fclose(f);

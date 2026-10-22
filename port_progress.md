@@ -120,3 +120,13 @@
 - Causa: `GameActivity.onCreate` (jadx, línea ~426/438) hace `new File(filesDir, "saves").mkdir()` en **Java** antes de `nativeSetPersistenceRootDirectory`. El motor nunca la crea: `javaMakeDir` (0x254d44) solo se llama desde `AndroidFileMgr::copyFileFromAssetsToInternalStorage` (0x2a7ce0), no desde el guardado.
 - Fix: `main.c` hace `sceIoMkdir(DATA_PATH "saves")` justo antes de `nativeSetPersistenceRootDirectory`, igual que el Java.
 - Abierto: reporte de progreso del mundo 1 reseteado al llegar al mundo 2 (v1.0 + carpeta creada a mano). Sin log; hipótesis más probable = progreso jugado antes de crear la carpeta nunca se escribió. Lag en mundo 2 (Choplifter): sin perfilar.
+
+### Bug 5.16 (Resuelto en consola) — Data abort al arrancar por el parche del carrusel de `ManyWorldsMenu` (run 014)
+- Dump `raymanjunglerun-psp2core-1792705410-...psp2dmp`: PC en eboot sin sentido; la pila tenía `so+0x43d714` y `so+0x53b6ef` (dtor de `std::string`).
+- Causa: el parche `beq` en `0x43d5c4` saltaba a `0x43d70c` = `mov r0,r9; blx ~string`, destruyendo el string temporal del bloque omitido con `r9` = página anterior.
+- Fix: destino `0x43d714` (incremento del bucle), `0x0a000052`. `[this+0x1a0]` queda NULL; todos sus lectores lo chequean.
+
+### Bug 5.17 (Resuelto en consola) — La partida se guarda pero nunca se carga (runs 015–018)
+- Síntoma: `slot1.dat` se escribe (lums de nivel 1), pero al reiniciar el progreso vuelve a 0; una partida con 98 lums sobrescribió 99 (en memoria había 0).
+- Causa: `AndroidPersistentMgr::readData` → `AndroidFileMgr::load(ulong*,int,FILE*)` (0x2a771c) hace `ferror()` inline de bionic (`ldrh [FILE,#12]; tst #0x40`). Con SceLibc ese offset no es `_flags` → toda lectura de save devuelve NULL (mismo tipo de bug que FMOD, `patch.c`). Único caller: `readData`.
+- Fix: `0x2a7794` `beq 0x2a77ac` → `b 0x2a77ac` (`0xea000004`). Además `access` → `access_soloader` (resolución de rutas igual que `fopen_soloader`).

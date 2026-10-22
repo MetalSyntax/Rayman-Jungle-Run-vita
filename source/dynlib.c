@@ -481,7 +481,7 @@ so_default_dynlib default_dynlib[] = {
             { "ungetwc", (uintptr_t)&ungetwc },
         #endif
 
-        { "access", (uintptr_t)&access },
+        { "access", (uintptr_t)&access_soloader },
         { "basename", (uintptr_t)&basename },
         { "chdir", (uintptr_t)&chdir },
         { "chmod", (uintptr_t)&chmod },

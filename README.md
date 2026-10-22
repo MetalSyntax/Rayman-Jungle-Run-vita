@@ -12,7 +12,8 @@ An enhanced, native port of **Rayman Jungle Run** (Android) for the **PlayStatio
 
 - **Native Resolution & 60 FPS target:** Runs at full Vita native resolution (960x544) targeting 60 FPS (some heavy scenes still drop frames, see Known Issues).
 - **Full High-Fidelity Audio:** Native implementation of FMOD Ex with Ogg Vorbis streaming and sample caching, playing all original music tracks and sound effects without distortion or missing audio.
-- **Full Game Unlocked:** All worlds, levels, DLCs, characters/skins, and dead-man stages are fully unlocked out of the box (in-app purchase prompts bypassed).
+- **Full Game Unlocked:** All 70 levels, worlds 6 & 7 (CASA DLC), character skins, gallery wallpapers and dead-man stages are fully unlocked out of the box (in-app purchase prompts bypassed).
+- **Persistent Saves:** Level progress, selected hero and settings are saved and restored between sessions (fixed in v1.1.0).
 - **Physical Gamepad & Front Touch:** Full integration with PS Vita hardware controls (Buttons, D-Pad, Left Analog Stick) plus native front touchscreen support.
 - **Shader Cache:** Runtime GXP shader binary caching on storage (`ux0:data/raymanjunglerun/gxp/`) eliminating recompilation stutters.
 - **Optimized Memory & I/O:** Uses SceLibcBridge with custom sample memory management to respect PS Vita kernel file descriptor limits (`EMFILE` safe).
@@ -75,6 +76,7 @@ Saves are stored in `ux0:data/raymanjunglerun/saves/` (`slot1.dat`, `secondarySa
 
 - **v1.0.1 and later** create the `saves/` folder automatically on launch.
 - **v1.0 did not create it**, so the game silently failed to save. If you are on v1.0, update, or create the folder manually with VitaShell: `ux0:data/raymanjunglerun/saves/`.
+- **v1.0.x wrote saves but never loaded them back** (progress appeared reset on every launch). **v1.1.0 fixes this**; existing `slot1.dat` files load as-is.
 - Progress played on v1.0 *before* that folder existed was never written to disk and cannot be recovered.
 - On first launch with a new save, select your save slot from the main menu so the game loads it.
 
@@ -82,8 +84,8 @@ Saves are stored in `ux0:data/raymanjunglerun/saves/` (`slot1.dat`, `secondarySa
 
 ## Known Issues
 
-- **Frame drops in some scenes** (e.g. World 2 during the Choplifter / flying sequences). Under investigation.
-- **Progress reset reported after reaching World 2** on v1.0 (after creating `saves/` manually). Not reproduced yet; if it happens on v1.0.1, please open an issue attaching the latest file from `ux0:data/raymanjunglerun/logs/` and your `saves/` folder.
+- **Frame drops in some scenes** (e.g. World 2 during the Choplifter / flying sequences). v1.1.0 raises the CPU clock to 500 MHz to reduce them; still under investigation.
+- If progress still resets on v1.1.0, please open an issue attaching the latest file from `ux0:data/raymanjunglerun/logs/` and your `saves/` folder.
 
 ---
 

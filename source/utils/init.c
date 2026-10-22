@@ -71,8 +71,8 @@ void soloader_init_all() {
             sceAppMgrLoadExec("app0:/configurator.bin", NULL, NULL);
     }
 
-    // Set default overclock values
-    scePowerSetArmClockFrequency(444);
+    // Set default overclock values (500 MHz ARM CPU for demanding levels and physics/particles)
+    scePowerSetArmClockFrequency(500);
     scePowerSetBusClockFrequency(222);
     scePowerSetGpuClockFrequency(222);
     scePowerSetGpuXbarClockFrequency(166);

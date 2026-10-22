@@ -213,12 +213,16 @@ static jboolean java_assetExists(jmethodID id, va_list args) {
     return ok;
 }
 
-// GameActivity.getDLCName(int): no store on Vita (InAppPurchaseTechno.NONE,
-// billingDLCNames=["no"] in RO1GameActivity.loadProperties), so every slot
-// is "no" -- matches what the Java layer would hand back offline.
+// GameActivity.getDLCName(int): return standard product IDs for DLC items
+// (index 0 = "skins1", index 1 = "rjr_unlock_all") so the engine can query
+// DLC status properly offline.
 static jobject java_getDLCName(jmethodID id, va_list args) {
     (void)id;
-    (void)va_arg(args, jint);
+    jint index = va_arg(args, jint);
+    if (index == 0)
+        return (jobject)jni->NewStringUTF(&jni, "skins1");
+    if (index == 1)
+        return (jobject)jni->NewStringUTF(&jni, "rjr_unlock_all");
     return (jobject)jni->NewStringUTF(&jni, "no");
 }
 
