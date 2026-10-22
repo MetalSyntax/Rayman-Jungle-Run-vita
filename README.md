@@ -10,7 +10,7 @@ An enhanced, native port of **Rayman Jungle Run** (Android) for the **PlayStatio
 
 ## Features
 
-- **Native Resolution & Solid 60 FPS:** Runs at full Vita native resolution (960x544) at smooth, consistent 60 frames per second without frame drops.
+- **Native Resolution & 60 FPS target:** Runs at full Vita native resolution (960x544) targeting 60 FPS (some heavy scenes still drop frames, see Known Issues).
 - **Full High-Fidelity Audio:** Native implementation of FMOD Ex with Ogg Vorbis streaming and sample caching, playing all original music tracks and sound effects without distortion or missing audio.
 - **Full Game Unlocked:** All worlds, levels, DLCs, characters/skins, and dead-man stages are fully unlocked out of the box (in-app purchase prompts bypassed).
 - **Physical Gamepad & Front Touch:** Full integration with PS Vita hardware controls (Buttons, D-Pad, Left Analog Stick) plus native front touchscreen support.
@@ -66,6 +66,24 @@ Make sure your PS Vita is running Henkaku / Enso on firmware 3.60 or 3.65 and ha
        └── sfx/
    ```
 7. Launch **Rayman Jungle Run** from your LiveArea!
+
+---
+
+## Save Data
+
+Saves are stored in `ux0:data/raymanjunglerun/saves/` (`slot1.dat`, `secondarySave`, `ROHeroe`, `Achievements`, ...).
+
+- **v1.0.1 and later** create the `saves/` folder automatically on launch.
+- **v1.0 did not create it**, so the game silently failed to save. If you are on v1.0, update, or create the folder manually with VitaShell: `ux0:data/raymanjunglerun/saves/`.
+- Progress played on v1.0 *before* that folder existed was never written to disk and cannot be recovered.
+- On first launch with a new save, select your save slot from the main menu so the game loads it.
+
+---
+
+## Known Issues
+
+- **Frame drops in some scenes** (e.g. World 2 during the Choplifter / flying sequences). Under investigation.
+- **Progress reset reported after reaching World 2** on v1.0 (after creating `saves/` manually). Not reproduced yet; if it happens on v1.0.1, please open an issue attaching the latest file from `ux0:data/raymanjunglerun/logs/` and your `saves/` folder.
 
 ---
 

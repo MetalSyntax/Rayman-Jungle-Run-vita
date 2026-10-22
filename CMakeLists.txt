@@ -14,7 +14,7 @@ include("${VITASDK}/share/vita.cmake" REQUIRED)
 set(VITA_APP_NAME "Rayman Jungle Run")
 set(VITA_TITLEID "PSVRJR001")
 set(VITA_VPKNAME "raymanjunglerun")
-set(VITA_VERSION "01.00")
+set(VITA_VERSION "01.01")
 set(VITA_MKSFOEX_FLAGS "-d ATTRIBUTE2=12")
 
 ## vitaGL vendored in vendor/vitaGL (copied from the Prince of Persia port,

@@ -114,3 +114,9 @@
 - F9 vídeo: N/A (no hay vídeos en assets).
 - F10 assets: Resueltos y completos en `ux0:data/raymanjunglerun/files/`.
 - F11–F15: Overclock 444/222/222/166 MHz habilitado. VPK y eboot.bin generados exitosamente.
+
+### Bug 5.15 (Resuelto en build, pendiente de consola) — No se crea `saves/`: el juego no guarda (reportes de usuarios v1.0)
+- Síntoma: en consola real todo `fopen(ux0:data/raymanjunglerun//saves/*, wb)` falla; crear `saves/` a mano con VitaShell lo arregla. En la consola de desarrollo no se veía porque `ux0_data/` desplegado ya traía `saves/`.
+- Causa: `GameActivity.onCreate` (jadx, línea ~426/438) hace `new File(filesDir, "saves").mkdir()` en **Java** antes de `nativeSetPersistenceRootDirectory`. El motor nunca la crea: `javaMakeDir` (0x254d44) solo se llama desde `AndroidFileMgr::copyFileFromAssetsToInternalStorage` (0x2a7ce0), no desde el guardado.
+- Fix: `main.c` hace `sceIoMkdir(DATA_PATH "saves")` justo antes de `nativeSetPersistenceRootDirectory`, igual que el Java.
+- Abierto: reporte de progreso del mundo 1 reseteado al llegar al mundo 2 (v1.0 + carpeta creada a mano). Sin log; hipótesis más probable = progreso jugado antes de crear la carpeta nunca se escribió. Lag en mundo 2 (Choplifter): sin perfilar.

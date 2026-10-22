@@ -129,6 +129,9 @@ static void *game_main(void *arg) {
         nativeSetRootDirectory(&jni, NULL, p);
         l_success("nativeSetRootDirectory(%s) done.", GAME_ROOT);
     } else l_error("nativeSetRootDirectory not found");
+    // GameActivity.onCreate does `new File(filesDir, "saves").mkdir()` in Java;
+    // the engine never creates it, and every save fopen(wb) fails without it.
+    sceIoMkdir(DATA_PATH "saves", 0777);
     if (nativeSetPersistenceRootDirectory) {
         jstring p = jni->NewStringUTF(&jni, DATA_PATH);
         nativeSetPersistenceRootDirectory(&jni, NULL, p);
