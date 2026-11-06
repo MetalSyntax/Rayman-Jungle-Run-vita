@@ -39,6 +39,7 @@
 
 #include "utils/logger.h"
 #include "controls.h"
+#include "trophies.h"
 
 enum {
     M_MAKE_DIR = 1,
@@ -256,6 +257,67 @@ static void java_quitApp(jmethodID id, va_list args) {
     sceKernelExitProcess(0);
 }
 
+// GameActivity.unlockAchievement(String): Pasta::AndroidScoreMgr::unlockAchievement
+// calls it unconditionally (the scoringEnabled() bool only gates the in-game
+// popup) with the Achievement's first ctor string = its GREE numeric id
+// (HW log 020: "10002958" for the 100-Lums one). Each row is the .so's own
+// triple (GREE id, iOS id, name key); any of them is accepted.
+// Trophy N <-> row N, same order as extras/trophy/trophies.json.
+static const char *const RJR_ACHIEVEMENTS[][3] = {
+    { NULL, NULL, NULL }, /* 0 = Platinum, unlocked by the OS */
+    { "10002958", "com.ubisoft.raymanorigins.lums100",            "STR_ACHIEVEMENT_1" },
+    { "10002959", "com.ubisoft.raymanorigins.lums500",            "STR_ACHIEVEMENT_2" },
+    { "10002960", "com.ubisoft.raymanorigins.lums1000",           "STR_ACHIEVEMENT_3" },
+    { "10002961", "com.ubisoft.raymanorigins.lums2000",           "STR_ACHIEVEMENT_4" },
+    { "10002962", "com.ubisoft.raymanorigins.lums3600",           "STR_ACHIEVEMENT_5" },
+    { "10002963", "com.ubisoft.raymanorigins.onerun.500lums",     "STR_ACHIEVEMENT_6" },
+    { "10002964", "com.ubisoft.raymanorigins.onerun.1000lums",    "STR_ACHIEVEMENT_7" },
+    { "10002965", "com.ubisoft.raymanorigins.onerun.2000lums",    "STR_ACHIEVEMENT_8" },
+    { "10002966", "com.ubisoft.raymanorigins.onerun.3600lums",    "STR_ACHIEVEMENT_9" },
+    { "10002967", "com.ubisoft.raymanorigins.allteeth.world1",    "STR_ACHIEVEMENT_10" },
+    { "10002968", "com.ubisoft.raymanorigins.allteeth.world2",    "STR_ACHIEVEMENT_11" },
+    { "10002969", "com.ubisoft.raymanorigins.allteeth.world3",    "STR_ACHIEVEMENT_12" },
+    { "10002970", "com.ubisoft.raymanorigins.allteeth.world4",    "STR_ACHIEVEMENT_13" },
+    { "10002975", "com.ubisoft.raymanorigins.allteeth.world5",    "STR_ACHIEVEMENT_18" },
+    { "10002971", "com.ubisoft.raymanorigins.allteeth.allworlds", "STR_ACHIEVEMENT_14" },
+    { "10002972", "com.ubisoft.raymanorigins.stupid.retry10times", "STR_ACHIEVEMENT_15" },
+    { "10002973", "com.ubisoft.raymanorigins.stupid.retry20times", "STR_ACHIEVEMENT_16" },
+    { "10002974", "com.ubisoft.raymanorigins.stupid.die20times",  "STR_ACHIEVEMENT_17" },
+};
+#define RJR_NUM_ACHIEVEMENTS (sizeof(RJR_ACHIEVEMENTS) / sizeof(RJR_ACHIEVEMENTS[0]))
+
+static uint8_t rjr_trophy_sent[RJR_NUM_ACHIEVEMENTS]; /* once per session: queue holds 32 */
+
+// Shared by the JNI handler and the ScoreManager save/load sync in patch.c.
+// Returns the trophy id, 0 if the achievement id is unknown.
+uint32_t rjr_trophy_unlock_id(const char *c, const char *from) {
+    uint32_t n;
+    for (n = 1; n < RJR_NUM_ACHIEVEMENTS; n++)
+        if (!strcmp(c, RJR_ACHIEVEMENTS[n][0]) || !strcmp(c, RJR_ACHIEVEMENTS[n][1]) ||
+            !strcmp(c, RJR_ACHIEVEMENTS[n][2]))
+            break;
+    if (n == RJR_NUM_ACHIEVEMENTS) {
+        l_warn("%s(%s): unknown achievement id", from, c);
+        return 0;
+    }
+    if (!rjr_trophy_sent[n]) {
+        rjr_trophy_sent[n] = 1;
+        l_info("%s(%s) -> trophy %u", from, c, (unsigned)n);
+        trophies_unlock(n);
+    }
+    return n;
+}
+
+static void java_unlockAchievement(jmethodID id, va_list args) {
+    (void)id;
+    jstring s = va_arg(args, jstring);
+    const char *c = jstr(s);
+    if (!c)
+        return;
+    rjr_trophy_unlock_id(c, "JNI unlockAchievement");
+    jstr_rel(s, c);
+}
+
 // Push/UPN registration: no GCM on Vita. Return NULL/empty so the engine
 // takes its offline branch (pushMessage stays NULL, nativeNotifyPush... is
 // never called with data).
@@ -350,7 +412,7 @@ MethodsVoid methodsVoid[] = {
     { M_SHOW_LEADERBOARDS,     voidNoop },
     { M_SHOW_ACHIEVEMENTS,     voidNoop },
     { M_DISPLAY_DASHBOARD,     voidNoop },
-    { M_UNLOCK_ACHIEVEMENT,    voidNoop }, // Phase 13: sceNpTrophyUnlock hook
+    { M_UNLOCK_ACHIEVEMENT,    java_unlockAchievement }, // -> sceNpTrophy (trophies.c)
     { M_QUIT_APP,              java_quitApp },
     { M_SET_PLAYER_NAME,       voidNoop },
     { M_SET_REGISTRATION_ID,   voidNoop },

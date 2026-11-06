@@ -21,6 +21,7 @@
 #include "utils/glutil.h"
 #include "utils/logger.h"
 #include "controls.h"
+#include "trophies.h"
 #include "reimpl/audio.h"
 
 #include <psp2/kernel/threadmgr.h>
@@ -75,6 +76,9 @@ static void *game_main(void *arg) {
 
     gl_init();
     l_success("vitaGL initialized.");
+
+    // Before the engine starts rendering: the NP setup dialog drives vglSwapBuffers itself.
+    trophies_init();
 
     // ---- GameActivity.onCreate() equivalents (setter phase) ----
     // All symbols below verified present (`nm -D` ... T Java_...).

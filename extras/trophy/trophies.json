@@ -1,0 +1,29 @@
+{
+ "comm_id": "RAYJ00001",
+ "title": "Rayman Jungle Run",
+ "detail": "Rayman Jungle Run PlayStation Vita Port",
+ "icon": "extras/livearea/icon0.png",
+ "banner": "extras/livearea/pic0.png",
+ "_order": "trophy N <-> RJR_ACHIEVEMENTS[N] in source/java.c (libRO1Mobile.so ID order)",
+ "trophies": [
+  {"ttype": "P", "name": "Rayman Jungle Run", "detail": "Earn every other trophy."},
+  {"ttype": "B", "name": "Starters", "detail": "Collect 100 Lums in total."},
+  {"ttype": "B", "name": "Hors d'oeuvres", "detail": "Collect 500 Lums in total."},
+  {"ttype": "B", "name": "Entree", "detail": "Collect 1000 Lums in total."},
+  {"ttype": "S", "name": "Dessert", "detail": "Collect 2000 Lums in total."},
+  {"ttype": "G", "name": "Icing on the cake", "detail": "Collect 3600 Lums in total."},
+  {"ttype": "B", "name": "Lums Race!", "detail": "Collect 500 Lums in one run."},
+  {"ttype": "S", "name": "Lums Adventure!", "detail": "Collect 1000 Lums in one run."},
+  {"ttype": "S", "name": "Lums Quest!", "detail": "Collect 2000 Lums in one run."},
+  {"ttype": "G", "name": "Lums Survival!", "detail": "Collect 3600 Lums in one run."},
+  {"ttype": "B", "name": "Genuine Smile", "detail": "Collect every Tooth of Death in world 1."},
+  {"ttype": "B", "name": "Coy Smile", "detail": "Collect every Tooth of Death in world 2."},
+  {"ttype": "B", "name": "Embarassed Smile", "detail": "Collect every Tooth of Death in world 3."},
+  {"ttype": "B", "name": "Grin", "detail": "Collect every Tooth of Death in world 4."},
+  {"ttype": "B", "name": "Jingle Smile", "detail": "Collect every Tooth of Death in world 5."},
+  {"ttype": "G", "name": "Dentist Paradise", "detail": "Collect every Tooth of Death in all worlds."},
+  {"ttype": "B", "name": "Stubborn!", "detail": "Retry a level 10 times."},
+  {"ttype": "B", "name": "Mule!", "detail": "Retry a level 20 times."},
+  {"ttype": "B", "name": "Survivor!", "detail": "Die 20 times."}
+ ]
+}

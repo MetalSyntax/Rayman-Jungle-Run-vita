@@ -13,6 +13,7 @@ An enhanced, native port of **Rayman Jungle Run** (Android) for the **PlayStatio
 - **Native Resolution & 60 FPS target:** Runs at full Vita native resolution (960x544) targeting 60 FPS (some heavy scenes still drop frames, see Known Issues).
 - **Full High-Fidelity Audio:** Native implementation of FMOD Ex with Ogg Vorbis streaming and sample caching, playing all original music tracks and sound effects without distortion or missing audio.
 - **Full Game Unlocked:** All 70 levels, worlds 6 & 7 (CASA DLC), character skins, gallery wallpapers and dead-man stages are fully unlocked out of the box (in-app purchase prompts bypassed).
+- **Native PS Vita Trophies:** All 18 in-game achievements (Lums, Teeth of Death, Stubborn...) plus a Platinum, shown with the system notification and in the Trophies app. Achievements already earned in an existing save are synced on the next load/save (new in v1.2.0, requires NoTrpDrm).
 - **Persistent Saves:** Level progress, selected hero and settings are saved and restored between sessions (fixed in v1.1.0).
 - **Physical Gamepad & Front Touch:** Full integration with PS Vita hardware controls (Buttons, D-Pad, Left Analog Stick) plus native front touchscreen support.
 - **Shader Cache:** Runtime GXP shader binary caching on storage (`ux0:data/raymanjunglerun/gxp/`) eliminating recompilation stutters.
@@ -40,6 +41,7 @@ Make sure your PS Vita is running Henkaku / Enso on firmware 3.60 or 3.65 and ha
 1. **[kubridge.skprx](https://github.com/TheOfficialFloW/kubridge/releases)** (v0.3.1 or higher)
 2. **[fd_fix.skprx](https://github.com/TheOfficialFloW/FdFix/releases)** (or repatch / rePatch reLoaded)
 3. **libshacccg.suprx** runtime shader compiler (can be easily extracted using **[ShaRKBR33D](https://github.com/Rinnegatamante/ShaRKBR33D)**).
+4. **[NoTrpDrm.suprx](https://github.com/Rinnegatamante/NoTrpDrm/releases)** under `*main` in `ur0:tai/config.txt` (optional, only needed for trophies; reboot after installing).
 
 ---
 

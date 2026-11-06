@@ -130,3 +130,10 @@
 - Síntoma: `slot1.dat` se escribe (lums de nivel 1), pero al reiniciar el progreso vuelve a 0; una partida con 98 lums sobrescribió 99 (en memoria había 0).
 - Causa: `AndroidPersistentMgr::readData` → `AndroidFileMgr::load(ulong*,int,FILE*)` (0x2a771c) hace `ferror()` inline de bionic (`ldrh [FILE,#12]; tst #0x40`). Con SceLibc ese offset no es `_flags` → toda lectura de save devuelve NULL (mismo tipo de bug que FMOD, `patch.c`). Único caller: `readData`.
 - Fix: `0x2a7794` `beq 0x2a77ac` → `b 0x2a77ac` (`0xea000004`). Además `access` → `access_soloader` (resolución de rutas igual que `fopen_soloader`).
+
+- **2026-11-06 — v1.20: trofeos nativos (método PoP / skill `psvita-trophies`), SIN probar en consola:**
+  - Sink verificado en el .so: `Pasta::AndroidScoreMgr::unlockAchievement` llama SIEMPRE a `GameActivity.unlockAchievement(String)` (el `CallBooleanMethod` previo solo decide el popup in-game) con el ID `com.ubisoft.raymanorigins.*`.
+  - `java.c`: `M_UNLOCK_ACHIEVEMENT` → `java_unlockAchievement` (ID o `STR_ACHIEVEMENT_n` → trofeo). 18 logros + platino, comm_id `RAYJ00001`, `extras/trophy/trophies.json` → TRP.
+  - `trophies_init()` tras `gl_init()` en `game_main`. CMake: `trophies.c`, `SceSysmodule_stub`, `SceNpTrophy_stub`, TRP en `sce_sys/trophy/RAYJ00001_00/`.
+  - VPK subido a `ux0:downloads/raymanjunglerun.vpk`. Logros ya ganados en saves viejos no se re-sincronizan (no hay re-chequeo).
+  - **HW (log 020):** set instalado OK (`Trophy state loaded: count=19`), pero los 100 Lums llegaron como `unlockAchievement(10002958)` = ID GREE numérico, no `com.ubisoft…` → "unknown achievement id". Fix: tabla con las 3 columnas del .so (GREE, iOS, STR_) + sync en `ScoreManager::load()/save()` (patch.c) que manda los logros ya marcados en el save. eboot subido a ux0:app/PSVRJR001 (+ VPK en downloads).

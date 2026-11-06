@@ -12,6 +12,7 @@
  */
 
 #include "utils/logger.h"
+#include "trophies.h"
 #include <stdio.h>
 #include <kubridge.h>
 #include <so_util/so_util.h>
@@ -75,7 +76,56 @@ static int dummy_logger_noop(void) {
 static uintptr_t dummy_vtable[128];
 static uintptr_t dummy_logger_instance[16] = {0};
 
+
+/**
+ * Trophy sync for achievements already in the save. The engine reports an
+ * achievement to Java only once (ScoreManager keeps an unlocked bitmask in its
+ * save), so achievements earned before trophies existed never reach
+ * java_unlockAchievement. After every ScoreManager::load()/save() walk the
+ * engine's own list and send the unlocked ones. Layout, from
+ * ScoreManager::refreshUnlockedAchievements (0x26cc74): +16 achievement list
+ * (vtable[2] = count(), vtable[3] = get(i)), +28 unlocked bitmask indexed by
+ * Achievement+4; Achievement+8 = std::string id (COW: first word = chars).
+ */
+uint32_t rjr_trophy_unlock_id(const char *c, const char *from);
+static so_hook sm_load_hook, sm_save_hook;
+
+static void rjr_sync_trophies(void *sm) {
+    uint32_t mask = *(uint32_t *)((char *)sm + 28);
+    void *list = *(void **)((char *)sm + 16);
+    if (!mask || !list)
+        return;
+    void **vt = *(void ***)list;
+    int count = ((int (*)(void *))vt[2])(list);
+    for (int i = 0; i < count; i++) {
+        char *a = ((char *(*)(void *, int))vt[3])(list, i);
+        if (!a)
+            continue;
+        uint32_t bit = *(uint32_t *)(a + 4);
+        const char *id = *(const char **)(a + 8);
+        if (bit < 32 && (mask & (1u << bit)) && id)
+            rjr_trophy_unlock_id(id, "ScoreManager sync");
+    }
+}
+
+static int ScoreManager_load(void *sm) {
+    int r = SO_CONTINUE(int, sm_load_hook, sm);
+    rjr_sync_trophies(sm);
+    return r;
+}
+
+static int ScoreManager_save(void *sm) {
+    int r = SO_CONTINUE(int, sm_save_hook, sm);
+    rjr_sync_trophies(sm);
+    return r;
+}
+
 void so_patch(void) {
+    sm_load_hook = hook_addr(so_symbol(&so_mod, "_ZN5Pasta12ScoreManager4loadEv"),
+                             (uintptr_t)&ScoreManager_load);
+    sm_save_hook = hook_addr(so_symbol(&so_mod, "_ZN5Pasta12ScoreManager4saveEv"),
+                             (uintptr_t)&ScoreManager_save);
+
     // Rayman Jungle Run - nativeRun calls GameBehaviourLogger::getSingleton()
     // at 0x255b6c without checking if the singleton is initialized, causing
     // a Data Abort (null pointer dereference) on the very first frame.
